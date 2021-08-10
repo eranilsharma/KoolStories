@@ -36,7 +36,8 @@ class VideoAdapter (val context: Context, val videoList:ArrayList<VideoModel>):
         holder.txtTitle.text=videoList.get(position).videoTitle
         holder.txtDesc.text=videoList.get(position).videoDesc
         val uri:Uri=Uri.parse(videoList.get(position).videoUrl)
-        holder.txtTimer.text="1:20"
+        val duration:String=convertMillieToHMmSs(getDuration(videoList.get(position).videoUrl))
+        holder.txtTimer.text= duration
         holder.videoView.setVideoURI(uri)
         holder.videoView.start()
         holder.progressBar.visibility=View.VISIBLE
@@ -44,9 +45,9 @@ class VideoAdapter (val context: Context, val videoList:ArrayList<VideoModel>):
             override fun onPrepared(mediaPlayer: MediaPlayer?) {
                 holder.progressBar.visibility=View.GONE
                 mediaPlayer?.start()
-                val timer = object : CountDownTimer(120000, 1000) {
+                val timer = object : CountDownTimer(getDuration(videoList.get(position).videoUrl), 1000) {
                     override fun onTick(millisUntilFinished: Long) {
-                        holder.txtTimer.text=(millisUntilFinished / 1000).toString()
+                        holder.txtTimer.text=convertMillieToHMmSs(millisUntilFinished)
                     }
 
                     override fun onFinish() {
@@ -62,25 +63,44 @@ class VideoAdapter (val context: Context, val videoList:ArrayList<VideoModel>):
         holder.videoView.setOnCompletionListener(object :MediaPlayer.OnCompletionListener{
             override fun onCompletion(mediaPlayer: MediaPlayer?) {
                 mediaPlayer?.start()
+                holder.txtTimer.text= duration
+                val timer = object : CountDownTimer(getDuration(videoList.get(position).videoUrl), 1000) {
+                    override fun onTick(millisUntilFinished: Long) {
+                        holder.txtTimer.text=convertMillieToHMmSs(millisUntilFinished)
+                    }
+
+                    override fun onFinish() {
+
+                    }
+                }
+                timer.start()
             }
         })
 
 
     }
 
+    private fun getDuration(videoUrl: String): Long {
+
+        val retriever = MediaMetadataRetriever()
+        retriever.setDataSource(videoUrl, HashMap())
+        val time = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+        val timeInMillisec = time!!.toLong()
+        retriever.release()
+        return timeInMillisec
+    }
 
 
     private fun convertMillieToHMmSs(timeInMillisec: Long): String {
-        val seconds: Long = timeInMillisec / 1000
-        val second = seconds % 60
-        val minute = seconds / 60 % 60
-        val hour = seconds / (60 * 60) % 24
+        val minutes: Long = timeInMillisec / 1000 / 60
+
+       val seconds: Long = timeInMillisec / 1000 % 60
 
         val result = ""
-        return if (hour > 0) {
-            String.format("%02d:%02d:%02d", hour, minute, second)
-        } else {
-            String.format("%02d:%02d", minute, second)
+        return if (minutes > 0) {
+           minutes.toString()+":"+seconds.toString()
+        } else  {
+             "00:"+seconds.toString()
         }
     }
 
